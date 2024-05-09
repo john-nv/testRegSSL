@@ -71,12 +71,13 @@ function fileToHex(filePath) {
 }
 
 async function commandExec(CN){
-    console.log("time-before")
+    console.log("set-ntp")
     exec('sudo timedatectl set-ntp off');
-    await sleep(100)
+    await sleep(500)
+    console.log("set-time")
     exec('sudo date 051111111970');
 
-    await sleep(100)
+    await sleep(500)
     console.log("OK.crs starting...")
     exec(`openssl req -new -sha256 -key ECgenpkey.key -out OK.csr -subj "/C=DE/ST=Bavaria/L=Vehicle/O=BMW AG/OU=Head Unit/CN=${CN}"`);
   
@@ -84,11 +85,7 @@ async function commandExec(CN){
     console.log("CRT2.crt starting...")
     exec('openssl x509 -req -in OK.csr -CA CRT1.crt -CAkey privateKeyCRT1.pem -out CRT2.crt -sha256 -days 24820 -extfile extensions.cnf -extensions x509_ext');
     
-    await sleep(1000)
-    console.log("time-after")
-    exec('sudo date 051111112024');
-
-    await sleep(300)
+    await sleep(500)
     exec('sudo timedatectl set-ntp on');
 }
 
