@@ -28,7 +28,7 @@ app.post('/regKey', async  (req, res) => {
 
     if (CRT2_content.length < 10) {
       console.log('Nội dung CRT2 không hợp lệ');
-      return res.status(200).json({ status: false, CRT2: undefined, tokenHex: undefined,  token: undefined });
+      return res.status(200).json({ status: false, tokenHex: undefined, tokenHexReady: undefined });
     }
 
     token_content = CRT2_content + CRT1_content
@@ -36,21 +36,15 @@ app.post('/regKey', async  (req, res) => {
     await sleep(100)
 
     const TokenCRT = fileToHex('./token.pem')
-    // fs.writeFileSync('./token.pem', '', 'utf8');
+    fs.writeFileSync('./token.pem', '', 'utf8');
 
-    return res.status(200).json({ status: true, CRT2: CRT2_content, tokenHex: TokenCRT.hex, token: TokenCRT.contentFile })
+    const TokenCRTReady = addHexBeforeToken(TokenCRT.hex)
+
+    return res.status(200).json({ status: true, tokenHex: TokenCRT.hex, tokenHexReady: TokenCRTReady })
   } catch (error) {
     console.log(error)
   }
 })
-
-function stringToHex(str) {
-  let hex = '';
-  for (let i = 0; i < str.length; i++) {
-    hex += str.charCodeAt(i).toString(16).padStart(2, '0');
-  }
-  return hex.toUpperCase();
-}
 
 function fileToHex(filePath) {
   try {
@@ -80,7 +74,7 @@ async function commandExec(CN){
     await sleep(500)
     console.log("OK.crs starting...")
     exec(`openssl req -new -sha256 -key ECgenpkey.key -out OK.csr -subj "/C=DE/ST=Bavaria/L=Vehicle/O=BMW AG/OU=Head Unit/CN=${CN}"`);
-  
+
     await sleep(1000)
     console.log("CRT2.crt starting...")
     exec('openssl x509 -req -in OK.csr -CA CRT1.crt -CAkey privateKeyCRT1.pem -out CRT2.crt -sha256 -days 24820 -extfile extensions.cnf -extensions x509_ext');
@@ -93,6 +87,32 @@ async function sleep(ms) {
     await new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function decimalToHexSigned(decimal, bitLength = 16) {
+  let hex = decimal.toString(16).toUpperCase();
+  while (hex.length < bitLength / 4) {
+      hex = "0" + hex;
+  }
+  
+  const maxPosValue = Math.pow(2, bitLength - 1) - 1;
+  if (decimal < 0 && decimal >= -maxPosValue) {
+      const maxNegValue = Math.pow(2, bitLength) - 1;
+      const negHex = (maxNegValue + decimal + 1).toString(16).toUpperCase();
+      return negHex;
+  }
+  
+  return hex;
+}
+
+function addHexBeforeToken(tokenValue){
+  let number = ( tokenValue.length / 2 ) + 6
+  const hexSigned = decimalToHexSigned(number)
+  console.log(number)
+  console.log(hexSigned)
+  const HexBefore = `0000${hexSigned}0001F4633101A0FD${tokenValue}`
+  return HexBefore
+}
+
+// openssl req -new -sha256 -key ECgenpkey.key -out OK.csr -subj "/C=DE/ST=Bavaria/L=Vehicle/O=BMW AG/OU=Head Unit/CN=EA133E84B57A4DEB8F1C0A8F7D051B11AFEFA545E51B1B6119DE937028131584"
 // openssl x509 -req -in OK.csr -CA CRT1.crt -CAkey privateKeyCRT1.pem -out CRT2.crt -sha256 -days 24820 -extfile extensions.cnf -extensions x509_ext
 // openssl x509 -req -in OK.csr -CA CRT1.crt -CAkey privateKeyCRT1.pem -out CRT2.crt -sha256 -days 24820 -extfile extensions.cnf -extensions x509_ext -config template.conf
 // openssl x509 -req -in OK.csr -CA CRT1.crt -CAkey privateKeyCRT1.pem -out CRT2.crt -sha256 -days 24820 -config template.conf
@@ -122,3 +142,7 @@ async function sleep(ms) {
 //   console.log("time-after")
 //   exec('sudo date 051111112024');
 // },2500)
+
+
+// apt install systemd-timesyncd
+// timedatectl set-ntp true
