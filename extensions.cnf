@@ -1,0 +1,11 @@
+[x509_ext]
+basicConstraints = CA:FALSE
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, digitalSignature, nonRepudiation, keyEncipherment
+extendedKeyUsage = clientAuth
+nsCertType = client
+
+[ Validity ]
+notBefore=19710101000100Z
+notAfter=20380930160900Z
