@@ -16,28 +16,29 @@ server.listen(PORT, () => { console.log(`Server is running on ${PORT}`) })
 app.use(express.urlencoded({ extended: true }))
 
 app.post('/regKey', async  (req, res) => { 
-  const { CA } = req.body;
+  const { CN } = req.body;
   let CRT1_content = ''
   let CRT2_content = ''
   let token_content = ''
   try {
-    // await commandExec()
+    await commandExec(CN)
 
     CRT1_content = fs.readFileSync('./CRT1.crt', 'utf8');
     CRT2_content = fs.readFileSync('./CRT2.crt', 'utf8');
 
     if (CRT2_content.length < 10) {
       console.log('Nội dung CRT2 không hợp lệ');
-      return res.status(200).json({ status: false, CRT2: undefined, token: undefined });
+      return res.status(200).json({ status: false, CRT2: undefined, tokenHex: undefined,  token: undefined });
     }
 
     token_content = CRT2_content + CRT1_content
-    // console.log(token_content)
+    fs.writeFileSync('./token.pem', token_content, 'utf8');
+    await sleep(100)
 
-    const hexToken = stringToHex(token_content);
-    console.log(hexToken)
+    const TokenCRT = fileToHex('./token.pem')
+    // fs.writeFileSync('./token.pem', '', 'utf8');
 
-    return res.status(200).json({ status: true, CRT2: CRT2_content, token: token_content })
+    return res.status(200).json({ status: true, CRT2: CRT2_content, tokenHex: TokenCRT.hex, token: TokenCRT.contentFile })
   } catch (error) {
     console.log(error)
   }
@@ -48,17 +49,37 @@ function stringToHex(str) {
   for (let i = 0; i < str.length; i++) {
     hex += str.charCodeAt(i).toString(16).padStart(2, '0');
   }
-  return hex;
+  return hex.toUpperCase();
 }
 
-async function commandExec(){
+function fileToHex(filePath) {
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    let hex = '';
+    for (let i = 0; i < fileContent.length; i++) {
+      hex += fileContent.charCodeAt(i).toString(16).padStart(2, '0');
+    }
+
+    return {
+      hex: hex.toUpperCase(),
+      contentFile: fileContent
+    }
+  } catch (error) {
+    console.error('Error reading file:', error);
+    return null;
+  }
+}
+
+async function commandExec(CN){
     console.log("time-before")
+    exec('sudo timedatectl set-ntp off');
+    await sleep(100)
     exec('sudo date 051111111970');
 
-    await sleep(500)
+    await sleep(100)
     console.log("OK.crs starting...")
     exec(`openssl req -new -sha256 -key ECgenpkey.key -out OK.csr -subj "/C=DE/ST=Bavaria/L=Vehicle/O=BMW AG/OU=Head Unit/CN=${CN}"`);
-    
+  
     await sleep(1000)
     console.log("CRT2.crt starting...")
     exec('openssl x509 -req -in OK.csr -CA CRT1.crt -CAkey privateKeyCRT1.pem -out CRT2.crt -sha256 -days 24820 -extfile extensions.cnf -extensions x509_ext');
@@ -66,6 +87,9 @@ async function commandExec(){
     await sleep(1000)
     console.log("time-after")
     exec('sudo date 051111112024');
+
+    await sleep(300)
+    exec('sudo timedatectl set-ntp on');
 }
 
 async function sleep(ms) {
