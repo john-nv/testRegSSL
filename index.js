@@ -1,6 +1,5 @@
 const forge = require('node-forge');
 const fs = require('fs');
-const EC = require('elliptic').ec;
 
 // const privateKeyData = fs.readFileSync('ECgenpkey.key', 'utf8');
 // const privateKey = forge.pki.privateKeyFromAsn1(privateKeyData)
