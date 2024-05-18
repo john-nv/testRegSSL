@@ -15,7 +15,7 @@ server.listen(PORT, () => { console.log(`Server is running on ${PORT}`) })
 
 app.use(express.urlencoded({ extended: true }))
 
-app.post('/regKey', async  (req, res) => { 
+app.post('/regKeyv2', async  (req, res) => { 
   const { CN } = req.body;
   let CRT1_content = ''
   let CRT2_content = ''
